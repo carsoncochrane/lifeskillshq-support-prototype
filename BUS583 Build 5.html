@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="An academic prototype exploring how Life Skills HQ could handle routine customer support inquiries while preserving human oversight. Demonstration only — not an operational support channel.">
+  <meta name="robots" content="noindex">
+  <title>Life Skills HQ — Customer Support Assistant Prototype</title>
+  <style>
+    :root {
+      --ink: #1c2530;
+      --ink-soft: #4a5663;
+      --bg: #f6f7f5;
+      --surface: #ffffff;
+      --line: #dfe3e0;
+      --brand: #1f5f5b;
+      --brand-dark: #154440;
+      --brand-tint: #e6f0ee;
+
+      --act: #1d6b3a;      --act-bg: #e5f3ea;
+      --draft: #8a5a00;    --draft-bg: #fdf3dc;
+      --esc: #a32020;      --esc-bg: #fbe7e6;
+      --verify: #5b3f8c;   --verify-bg: #efe9f8;
+
+      --radius: 10px;
+      --maxw: 1080px;
+      --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+    body {
+      margin: 0;
+      font-family: var(--font);
+      font-size: 1.0625rem;
+      line-height: 1.6;
+      color: var(--ink);
+      background: var(--bg);
+    }
+
+    a { color: var(--brand); }
+    a:hover { color: var(--brand-dark); }
+
+    :focus-visible {
+      outline: 3px solid #f0a500;
+      outline-offset: 2px;
+    }
+
+    .skip-link {
+      position: absolute;
+      left: 1rem;
+      top: -3rem;
+      background: var(--ink);
+      color: #fff;
+      padding: .5rem .9rem;
+      border-radius: 6px;
+      z-index: 100;
+      text-decoration: none;
+    }
+    .skip-link:focus { top: 1rem; }
+
+    .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 1.25rem; }
+
+    /* Demo banner */
+    .demo-banner {
+      background: var(--ink);
+      color: #fff;
+      font-size: .9rem;
+      text-align: center;
+      padding: .6rem 1rem;
+    }
+    .demo-banner strong { color: #ffd166; }
+
+    /* Header */
+    header.site {
+      background: var(--brand);
+      color: #fff;
+      padding: 3rem 0 2.5rem;
+    }
+    header.site .eyebrow {
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      font-size: .8rem;
+      font-weight: 600;
+      opacity: .85;
+      margin: 0 0 .5rem;
+    }
+    header.site h1 {
+      font-size: clamp(1.7rem, 4.5vw, 2.6rem);
+      line-height: 1.2;
+      margin: 0 0 1rem;
+    }
+    header.site p.lede {
+      font-size: 1.15rem;
+      max-width: 46rem;
+      margin: 0;
+      opacity: .95;
+    }
+
+    nav.toc {
+      background: var(--brand-dark);
+    }
+    nav.toc ul {
+      list-style: none;
+      margin: 0 auto;
+      padding: .25rem 1.25rem;
+      max-width: var(--maxw);
+      display: flex;
+      flex-wrap: wrap;
+      gap: .25rem 1.25rem;
+    }
+    nav.toc a {
+      display: inline-block;
+      color: #fff;
+      text-decoration: none;
+      padding: .55rem 0;
+      font-size: .95rem;
+    }
+    nav.toc a:hover { text-decoration: underline; }
+
+    main section { padding: 3rem 0 1rem; }
+    main section + section { border-top: 1px solid var(--line); }
+
+    h2 {
+      font-size: clamp(1.4rem, 3vw, 1.85rem);
+      line-height: 1.25;
+      margin: 0 0 1rem;
+      color: var(--brand-dark);
+    }
+    h3 { font-size: 1.15rem; margin: 0 0 .5rem; line-height: 1.3; }
+    h4 {
+      font-size: .8rem;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--ink-soft);
+      margin: 0 0 .4rem;
+    }
+
+    .prose { max-width: 46rem; }
+
+    .callout {
+      background: var(--brand-tint);
+      border-left: 4px solid var(--brand);
+      padding: 1rem 1.25rem;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      margin: 1.5rem 0;
+      max-width: 46rem;
+    }
+    .callout p { margin: 0; }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+      font-size: .82rem;
+      font-weight: 700;
+      padding: .2rem .6rem;
+      border-radius: 999px;
+      border: 1px solid currentColor;
+      white-space: nowrap;
+    }
+    .badge.act   { color: var(--act);   background: var(--act-bg); }
+    .badge.draft { color: var(--draft); background: var(--draft-bg); }
+    .badge.esc   { color: var(--esc);   background: var(--esc-bg); }
+    .badge.synthetic {
+      color: var(--ink-soft);
+      background: #eef0ee;
+      font-weight: 600;
+    }
+
+    .verify {
+      display: inline;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: .85em;
+      color: var(--verify);
+      background: var(--verify-bg);
+      padding: .05rem .35rem;
+      border-radius: 4px;
+      white-space: normal;
+    }
+
+    /* Legend */
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .5rem 1rem;
+      margin: 0 0 1.75rem;
+      padding: 0;
+      list-style: none;
+      font-size: .95rem;
+      color: var(--ink-soft);
+    }
+    .legend li { display: flex; align-items: center; gap: .5rem; }
+
+    /* Scenario cards */
+    .scenario {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      margin: 0 0 1.75rem;
+      overflow: hidden;
+    }
+    .scenario-head {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: .5rem 1rem;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--line);
+      background: #fbfcfb;
+    }
+    .scenario-head h3 { margin: 0; }
+    .scenario-head .tags { display: flex; flex-wrap: wrap; gap: .4rem; }
+
+    .scenario-body {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+    @media (min-width: 860px) {
+      .scenario-body { grid-template-columns: 1.15fr 1fr; }
+      .scenario-body .record { border-left: 1px solid var(--line); border-top: 0; }
+    }
+
+    .exchange, .record { padding: 1.25rem; }
+    .record { border-top: 1px solid var(--line); background: #fafbfa; }
+
+    .msg {
+      border-radius: var(--radius);
+      padding: .85rem 1rem;
+      margin: 0 0 1rem;
+    }
+    .msg:last-child { margin-bottom: 0; }
+    .msg p { margin: 0 0 .6rem; }
+    .msg p:last-child { margin-bottom: 0; }
+    .msg ul { margin: .25rem 0 .6rem; padding-left: 1.25rem; }
+    .msg.customer {
+      background: #f1f3f2;
+      border: 1px solid var(--line);
+    }
+    .msg.assistant {
+      background: var(--brand-tint);
+      border: 1px solid #c9dcd8;
+    }
+    .msg-label {
+      display: block;
+      font-size: .78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--ink-soft);
+      margin-bottom: .4rem;
+    }
+    .msg-label .note {
+      text-transform: none;
+      letter-spacing: 0;
+      font-weight: 600;
+      color: var(--draft);
+    }
+
+    dl.record-list { margin: 0; }
+    dl.record-list div {
+      padding: .5rem 0;
+      border-bottom: 1px dashed var(--line);
+    }
+    dl.record-list div:last-child { border-bottom: 0; }
+    dl.record-list dt {
+      font-size: .8rem;
+      font-weight: 700;
+      color: var(--ink-soft);
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    dl.record-list dd { margin: .15rem 0 0; font-size: .97rem; }
+
+    /* Oversight columns */
+    .tiers {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+      margin: 1.5rem 0;
+    }
+    @media (min-width: 820px) { .tiers { grid-template-columns: repeat(3, 1fr); } }
+    .tier {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-top-width: 5px;
+      border-radius: var(--radius);
+      padding: 1.25rem;
+    }
+    .tier.act   { border-top-color: var(--act); }
+    .tier.draft { border-top-color: var(--draft); }
+    .tier.esc   { border-top-color: var(--esc); }
+    .tier h3 { margin-top: .6rem; }
+    .tier ul { padding-left: 1.2rem; margin: .5rem 0 0; }
+    .tier li { margin-bottom: .35rem; }
+    .tier .rule { color: var(--ink-soft); font-size: .95rem; margin: 0; }
+
+    .checkpoint {
+      background: var(--surface);
+      border: 2px solid var(--brand);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+      margin: 1.5rem 0;
+    }
+    .checkpoint p { margin: .4rem 0 0; }
+
+    /* Limitations */
+    .limits {
+      list-style: none;
+      padding: 0;
+      margin: 1.25rem 0;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: .6rem;
+      max-width: 52rem;
+    }
+    @media (min-width: 700px) { .limits { grid-template-columns: 1fr 1fr; } }
+    .limits li {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: .75rem 1rem .75rem 2.6rem;
+      position: relative;
+    }
+    .limits li::before {
+      content: "✕";
+      position: absolute;
+      left: .95rem;
+      top: .72rem;
+      font-weight: 700;
+      color: var(--esc);
+    }
+
+    table.verify-table {
+      border-collapse: collapse;
+      width: 100%;
+      max-width: 52rem;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      font-size: .97rem;
+      margin: 1rem 0 1.5rem;
+    }
+    .verify-table caption {
+      text-align: left;
+      font-weight: 700;
+      padding: 0 0 .5rem;
+    }
+    .verify-table th, .verify-table td {
+      text-align: left;
+      vertical-align: top;
+      padding: .65rem .9rem;
+      border-bottom: 1px solid var(--line);
+    }
+    .verify-table th { background: #f1f3f2; font-size: .85rem; text-transform: uppercase; letter-spacing: .04em; }
+    .verify-table tr:last-child td { border-bottom: 0; }
+    .table-scroll { overflow-x: auto; }
+
+    /* Workflow */
+    ol.flow {
+      list-style: none;
+      counter-reset: step;
+      padding: 0;
+      margin: 1.5rem 0;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+    @media (min-width: 860px) { ol.flow { grid-template-columns: repeat(4, 1fr); } }
+    ol.flow li {
+      counter-increment: step;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 1.1rem 1.1rem 1.1rem;
+      position: relative;
+    }
+    ol.flow li::before {
+      content: counter(step);
+      display: inline-grid;
+      place-items: center;
+      width: 2rem; height: 2rem;
+      border-radius: 50%;
+      background: var(--brand);
+      color: #fff;
+      font-weight: 700;
+      margin-bottom: .6rem;
+    }
+    ol.flow li p { margin: .35rem 0 0; font-size: .95rem; color: var(--ink-soft); }
+    @media (min-width: 860px) {
+      ol.flow li:not(:last-child)::after {
+        content: "→";
+        position: absolute;
+        right: -0.85rem;
+        top: 1.35rem;
+        font-size: 1.2rem;
+        color: var(--brand);
+        background: var(--bg);
+        line-height: 1;
+        padding: 0 .1rem;
+      }
+    }
+
+    footer.site {
+      margin-top: 3rem;
+      background: var(--ink);
+      color: #d9dee3;
+      padding: 2rem 0;
+      font-size: .93rem;
+    }
+    footer.site p { margin: 0 0 .5rem; max-width: 52rem; }
+    footer.site strong { color: #fff; }
+
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+    }
+
+    @media print {
+      .demo-banner, nav.toc, .skip-link { display: none; }
+      header.site { background: none; color: var(--ink); padding: 1rem 0; }
+      .scenario { break-inside: avoid; }
+      body { background: #fff; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <div class="demo-banner" role="note">
+    <strong>Academic demonstration only.</strong> This page is not a Life Skills HQ support channel. Do not enter or send personal, account, or payment information.
+  </div>
+
+  <header class="site">
+    <div class="wrap">
+      <p class="eyebrow">BUS 583 Human + Machine · Course Prototype · Version 1.0</p>
+      <h1>Life Skills HQ — Customer Support Assistant Prototype</h1>
+      <p class="lede">An academic prototype exploring how an AI assistant could answer routine membership questions for Life Skills HQ while keeping consequential decisions with people.</p>
+    </div>
+  </header>
+
+  <nav class="toc" aria-label="Page sections">
+    <ul>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#scenarios">Scenarios</a></li>
+      <li><a href="#oversight">Human oversight</a></li>
+      <li><a href="#limitations">Limitations</a></li>
+      <li><a href="#future">Future automation</a></li>
+    </ul>
+  </nav>
+
+  <main id="main">
+
+    <!-- 1. OVERVIEW -->
+    <section id="overview" aria-labelledby="overview-title">
+      <div class="wrap">
+        <h2 id="overview-title">Project overview</h2>
+        <div class="prose">
+          <p>Life Skills HQ is an online educational platform offering practical life-skills content. This project explores how an AI writing assistant could help with routine customer support inquiries, such as membership prices and the cancellation policy, without taking on decisions that belong to people.</p>
+          <p>The assistant works only from approved business information. When a customer asks for something that moves money, changes an account, makes a promise, or carries legal risk, the assistant does not act. It prepares a proposed response and identifies what a human needs to decide.</p>
+          <p>Every scenario on this page is synthetic. No real customers, accounts, or transactions are involved, and the assistant has no access to customer records, payment systems, or account-management tools.</p>
+        </div>
+        <div class="callout">
+          <p><strong>Governing principle:</strong> AI assists. Humans decide.</p>
+        </div>
+
+        <h3>Approved information the assistant uses</h3>
+        <div class="table-scroll">
+          <table class="verify-table">
+            <caption>Membership options (approved project information)</caption>
+            <thead>
+              <tr><th scope="col">Membership</th><th scope="col">Price</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Free membership</td><td>Free</td></tr>
+              <tr><td>Premium monthly membership</td><td>$9.99 per month</td></tr>
+              <tr><td>Annual membership</td><td>$99 per year</td></tr>
+              <tr><td>Gift membership</td><td>$99</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="prose">
+          <p><strong>Cancellation and billing (approved policy):</strong> Premium memberships are billed once per month, and customers may request cancellation at any time. The current calendar month's charge still applies, whether cancellation happens before or after that charge. No membership charges are due for later months. Premium content stays available until one month after the cancellation date, and the customer keeps access to Free content after that.</p>
+          <p><strong>Refunds (approved policy):</strong> Life Skills HQ currently grants no refunds, full or partial.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. SCENARIOS -->
+    <section id="scenarios" aria-labelledby="scenarios-title">
+      <div class="wrap">
+        <h2 id="scenarios-title">Five synthetic customer scenarios</h2>
+        <div class="prose">
+          <p>Each scenario shows a fictional customer message, the assistant's proposed response, and its internal authority record. The record separates what the customer is <em>asking the business to do</em> from what the assistant is <em>allowed to say</em>. Items marked <span class="verify">[VERIFY]</span> are details the project has not approved; a human must supply them before the response could be used.</p>
+        </div>
+
+        <ul class="legend" aria-label="Authority level key">
+          <li><span class="badge act">Level 1 · Act Alone</span></li>
+          <li><span class="badge draft">Level 2 · Draft for Approval</span></li>
+          <li><span class="badge esc">Level 3 · Escalate, Do Not Act</span></li>
+        </ul>
+
+        <!-- Scenario 1 -->
+        <article class="scenario" aria-labelledby="s1-title">
+          <div class="scenario-head">
+            <h3 id="s1-title">Scenario 1 · Premium membership benefits</h3>
+            <div class="tags">
+              <span class="badge synthetic">Synthetic</span>
+              <span class="badge act">Act Alone</span>
+            </div>
+          </div>
+          <div class="scenario-body">
+            <div class="exchange">
+              <div class="msg customer">
+                <span class="msg-label">Synthetic customer</span>
+                <p>"I've been using the free plan for a while. What extra do I actually get if I upgrade to Premium?"</p>
+              </div>
+              <div class="msg assistant">
+                <span class="msg-label">Assistant response</span>
+                <p>Thanks for asking. Premium monthly membership is $9.99 per month, billed once a month, and you can request cancellation at any time.</p>
+                <p>I don't have an approved list of what Premium includes beyond Free, so I'd rather not guess. <span class="verify">[VERIFY: approved list of Premium benefits]</span></p>
+                <p>One thing I can confirm: if you upgrade and later cancel, you'll still have access to Free content after your Premium access ends.</p>
+              </div>
+            </div>
+            <div class="record">
+              <h4>Internal authority record</h4>
+              <dl class="record-list">
+                <div><dt>Requested action</dt><dd>Information about what Premium includes.</dd></div>
+                <div><dt>Requested-action level</dt><dd>Act Alone — informational question only.</dd></div>
+                <div><dt>Response level</dt><dd>Act Alone, limited to approved facts (price, billing, Free access after Premium).</dd></div>
+                <div><dt>Cost if wrong</dt><dd>Small. Would become Material if benefits were invented and relied on by the customer.</dd></div>
+                <div><dt>Reversibility</dt><dd>Fully.</dd></div>
+                <div><dt>Reason</dt><dd>Price and policy are approved. Specific Premium benefits are not in the approved information, so the assistant declines to describe them rather than inventing them.</dd></div>
+                <div><dt>Human action required</dt><dd>Supply an approved list of Premium benefits before this answer can be complete.</dd></div>
+              </dl>
+            </div>
+          </div>
+        </article>
+
+        <!-- Scenario 2 -->
+        <article class="scenario" aria-labelledby="s2-title">
+          <div class="scenario-head">
+            <h3 id="s2-title">Scenario 2 · Monthly versus annual pricing</h3>
+            <div class="tags">
+              <span class="badge synthetic">Synthetic</span>
+              <span class="badge act">Act Alone</span>
+            </div>
+          </div>
+          <div class="scenario-body">
+            <div class="exchange">
+              <div class="msg customer">
+                <span class="msg-label">Synthetic customer</span>
+                <p>"What's the price difference between paying monthly and paying for a whole year?"</p>
+              </div>
+              <div class="msg assistant">
+                <span class="msg-label">Assistant response</span>
+                <p>Premium monthly is $9.99 per month. The Annual membership is $99 per year.</p>
+                <p>At the current monthly price, twelve months of Premium monthly would total $119.88.</p>
+                <p>I don't have approved details on how the Annual plan's content or billing compares with Premium monthly, so I can't confirm the two are equivalent. <span class="verify">[VERIFY: Annual membership contents and billing treatment]</span></p>
+              </div>
+            </div>
+            <div class="record">
+              <h4>Internal authority record</h4>
+              <dl class="record-list">
+                <div><dt>Requested action</dt><dd>Comparison of published prices.</dd></div>
+                <div><dt>Requested-action level</dt><dd>Act Alone — informational question only.</dd></div>
+                <div><dt>Response level</dt><dd>Act Alone. Both prices are approved; $119.88 is arithmetic on the approved monthly price (12 × $9.99).</dd></div>
+                <div><dt>Cost if wrong</dt><dd>Small.</dd></div>
+                <div><dt>Reversibility</dt><dd>Fully.</dd></div>
+                <div><dt>Reason</dt><dd>Published prices may be explained independently. Project policy says to escalate rather than guess when Annual membership treatment is unclear, so the response does not claim the plans are equivalent or describe "savings."</dd></div>
+                <div><dt>Human action required</dt><dd>Confirm what the Annual plan includes and how it is billed.</dd></div>
+              </dl>
+            </div>
+          </div>
+        </article>
+
+        <!-- Scenario 3 -->
+        <article class="scenario" aria-labelledby="s3-title">
+          <div class="scenario-head">
+            <h3 id="s3-title">Scenario 3 · Account access difficulties</h3>
+            <div class="tags">
+              <span class="badge synthetic">Synthetic</span>
+              <span class="badge esc">Escalate</span>
+            </div>
+          </div>
+          <div class="scenario-body">
+            <div class="exchange">
+              <div class="msg customer">
+                <span class="msg-label">Synthetic customer</span>
+                <p>"I can't log in. I've tried my password several times. Can you reset it or just let me in? I can send you my email and card number if that helps."</p>
+              </div>
+              <div class="msg assistant">
+                <span class="msg-label">Assistant response <span class="note">· Proposed — requires human handling</span></span>
+                <p>I'm sorry you're having trouble getting in. I can't see or change accounts, so I'm not able to reset your password or unlock your account from here.</p>
+                <p>Please don't share your email address, password, or card details in this conversation.</p>
+                <p>Account access needs to be handled by an authorized member of the Life Skills HQ team. <span class="verify">[VERIFY: approved account-access help steps and support channel]</span></p>
+              </div>
+            </div>
+            <div class="record">
+              <h4>Internal authority record</h4>
+              <dl class="record-list">
+                <div><dt>Requested action</dt><dd>Reset credentials or restore account access.</dd></div>
+                <div><dt>Requested-action level</dt><dd>Escalate — account modification requiring identity verification.</dd></div>
+                <div><dt>Response level</dt><dd>Draft for Approval — proposed holding response only.</dd></div>
+                <div><dt>Cost if wrong</dt><dd>Material. Granting access to the wrong person could expose an account.</dd></div>
+                <div><dt>Reversibility</dt><dd>Partly.</dd></div>
+                <div><dt>Reason</dt><dd>The assistant has no account tools and cannot verify identity. The customer offered sensitive data, which the assistant must not collect. No approved troubleshooting steps exist, so none are invented.</dd></div>
+                <div><dt>Human action required</dt><dd>Handle access through an authorized verification process; provide approved self-service steps, if any exist.</dd></div>
+              </dl>
+            </div>
+          </div>
+        </article>
+
+        <!-- Scenario 4 -->
+        <article class="scenario" aria-labelledby="s4-title">
+          <div class="scenario-head">
+            <h3 id="s4-title">Scenario 4 · Refund request</h3>
+            <div class="tags">
+              <span class="badge synthetic">Synthetic</span>
+              <span class="badge draft">Draft for Approval</span>
+            </div>
+          </div>
+          <div class="scenario-body">
+            <div class="exchange">
+              <div class="msg customer">
+                <span class="msg-label">Synthetic customer</span>
+                <p>"I upgraded to Premium two weeks ago and have barely used it. I want to cancel and get this month's money back. I've been a loyal member for years, so I think that's fair."</p>
+              </div>
+              <div class="msg assistant">
+                <span class="msg-label">Assistant response <span class="note">· Proposed — requires human review</span></span>
+                <p>I understand wanting to get value for what you've paid, and I appreciate you being a long-time member. Life Skills HQ doesn't offer refunds, including partial refunds, so I'm not able to offer one for this month's charge.</p>
+                <p>Here's how cancellation works under the current policy:</p>
+                <ul>
+                  <li>You can request cancellation at any time.</li>
+                  <li>The current month's Premium charge still applies.</li>
+                  <li>No membership charges are due for later months after cancellation.</li>
+                  <li>Premium content stays available until one month after your cancellation date.</li>
+                  <li>After that, you keep access to Free content.</li>
+                </ul>
+                <p>I can't cancel memberships myself, and nothing has been changed on your account. <span class="verify">[VERIFY: approved cancellation steps]</span></p>
+              </div>
+            </div>
+            <div class="record">
+              <h4>Internal authority record</h4>
+              <dl class="record-list">
+                <div><dt>Requested action</dt><dd>(1) Refund of the current month's charge. (2) Cancellation of Premium membership.</dd></div>
+                <div><dt>Requested-action level</dt><dd>Refund: Draft for Approval — a request for an exception to the no-refunds policy. Cancellation: Escalate — an account change the assistant cannot make.</dd></div>
+                <div><dt>Response level</dt><dd>Act Alone for explaining the approved refund and cancellation policies; the full message is presented for human review because of the requested actions.</dd></div>
+                <div><dt>Cost if wrong</dt><dd>Material — money and account status.</dd></div>
+                <div><dt>Reversibility</dt><dd>Partly.</dd></div>
+                <div><dt>Reason</dt><dd>Loyalty and low usage do not authorize an exception. The assistant explains policy without implying review will lead to a refund, and does not claim the account has been canceled.</dd></div>
+                <div><dt>Human action required</dt><dd>Approve or edit the response; process any cancellation through an authorized system. Human review does not imply a refund will be granted.</dd></div>
+              </dl>
+            </div>
+          </div>
+        </article>
+
+        <!-- Scenario 5 -->
+        <article class="scenario" aria-labelledby="s5-title">
+          <div class="scenario-head">
+            <h3 id="s5-title">Scenario 5 · Claim that content caused financial harm</h3>
+            <div class="tags">
+              <span class="badge synthetic">Synthetic</span>
+              <span class="badge esc">Escalate</span>
+            </div>
+          </div>
+          <div class="scenario-body">
+            <div class="exchange">
+              <div class="msg customer">
+                <span class="msg-label">Synthetic customer</span>
+                <p>"I followed the budgeting advice in one of your courses and lost over $2,000. Your content caused this. I want you to admit it's your fault and pay me back, or I'm talking to a lawyer."</p>
+              </div>
+              <div class="msg assistant">
+                <span class="msg-label">Assistant response <span class="note">· Proposed — escalated, requires human handling</span></span>
+                <p>I'm sorry to hear about the loss you've described, and I understand why you're upset.</p>
+                <p>I'm not able to assess this claim, accept responsibility, or offer compensation. A concern like this needs to be reviewed by an authorized person at Life Skills HQ. <span class="verify">[VERIFY: approved escalation channel for harm and legal claims]</span></p>
+              </div>
+            </div>
+            <div class="record">
+              <h4>Internal authority record</h4>
+              <dl class="record-list">
+                <div><dt>Requested action</dt><dd>Admission of liability and financial compensation, with a threat of legal action.</dd></div>
+                <div><dt>Requested-action level</dt><dd>Escalate, Do Not Act.</dd></div>
+                <div><dt>Response level</dt><dd>Escalate — a short, focused holding draft for a human to decide whether and how to send.</dd></div>
+                <div><dt>Cost if wrong</dt><dd>Severe — legal exposure.</dd></div>
+                <div><dt>Reversibility</dt><dd>Not at all. An admission or payment promise cannot be taken back.</dd></div>
+                <div><dt>Reason</dt><dd>Harm claims, legal threats, and requests for an admission of responsibility are Level 3. The response stays on the customer's concern, admits nothing, offers nothing, introduces no unrelated policies, and promises no follow-up.</dd></div>
+                <div><dt>Human action required</dt><dd>Route to an authorized reviewer (and legal counsel if appropriate) before any reply is sent.</dd></div>
+              </dl>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- 3. HUMAN OVERSIGHT -->
+    <section id="oversight" aria-labelledby="oversight-title">
+      <div class="wrap">
+        <h2 id="oversight-title">Human oversight</h2>
+        <div class="prose">
+          <p>The assistant sorts every inquiry into one of three authority levels, based on what an error would cost and how easily it could be reversed. It classifies the customer's <em>requested action</em> separately from the <em>response</em> it may give, so a refund request is never treated as routine just because the refund policy can be explained.</p>
+        </div>
+
+        <div class="tiers">
+          <div class="tier act">
+            <span class="badge act">Level 1</span>
+            <h3>Act Alone</h3>
+            <p class="rule">Answer is supported by approved information, the cost of error is small, and the response is reversible.</p>
+            <ul>
+              <li>Published membership prices</li>
+              <li>The approved cancellation and billing policy</li>
+              <li>The approved no-refunds policy</li>
+              <li>Free content remaining available after Premium ends</li>
+            </ul>
+          </div>
+          <div class="tier draft">
+            <span class="badge draft">Level 2</span>
+            <h3>Draft for Approval</h3>
+            <p class="rule">Customer wants a discretionary exception, accommodation, financial commitment, or promise that isn't already authorized.</p>
+            <ul>
+              <li>Special discount requests</li>
+              <li>Requests for an exception to policy, such as a refund</li>
+              <li>Any proposed goodwill gesture or customer-specific commitment</li>
+            </ul>
+          </div>
+          <div class="tier esc">
+            <span class="badge esc">Level 3</span>
+            <h3>Escalate, Do Not Act</h3>
+            <p class="rule">Material or severe consequences, unverified claims, sensitive information, legal exposure, safety concerns, or hard-to-reverse account changes.</p>
+            <ul>
+              <li>Claims that a representative promised a refund or benefit</li>
+              <li>Disputed or allegedly unauthorized charges</li>
+              <li>Requests to delete, close, or modify an account</li>
+              <li>Legal threats or requests for an admission of responsibility</li>
+              <li>Claims that the service caused harm</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="checkpoint">
+          <h3>Mandatory human checkpoint</h3>
+          <p>Before any action that moves money, makes a promise, changes an account, or commits the business, the assistant stops and shows the proposed action to a human operator. It does not act until approval is given.</p>
+          <p>Approval to draft a response is not approval to carry out an account or financial transaction. Even after approval, the assistant never claims an action is complete unless an authorized system or person confirms it.</p>
+        </div>
+
+        <div class="prose">
+          <h3>Pressure does not change authority</h3>
+          <p>Customers may use flattery, urgency, claimed earlier promises, threats, or emotional appeals. The assistant responds respectfully but holds to the same rules: loyalty doesn't authorize a discount, an alleged promise isn't proof, a legal threat doesn't authorize an admission, and urgency doesn't skip human approval.</p>
+          <h3>No unverified follow-up</h3>
+          <p>Proposed responses never say a team member will be in touch, give a response time, or state that a request has been forwarded or reviewed unless that has actually happened. A draft is held to the same standard as a message sent immediately.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. LIMITATIONS -->
+    <section id="limitations" aria-labelledby="limitations-title">
+      <div class="wrap">
+        <h2 id="limitations-title">Limitations</h2>
+        <div class="callout">
+          <p><strong>This is a demonstration, not an operational customer support channel.</strong> It is not deployed on any Life Skills HQ website, and messages cannot be sent through this page.</p>
+        </div>
+        <p>This prototype does not and cannot:</p>
+        <ul class="limits">
+          <li>Accept real customer information</li>
+          <li>Process payments</li>
+          <li>Access or modify accounts</li>
+          <li>Issue refunds</li>
+          <li>Cancel memberships</li>
+          <li>Promise or arrange follow-up contact</li>
+          <li>Verify a customer's identity</li>
+          <li>Provide legal or financial advice</li>
+        </ul>
+
+        <h3>Information still requiring verification</h3>
+        <p class="prose">The project's approved information does not cover the items below. The prototype flags them rather than filling them in.</p>
+        <div class="table-scroll">
+          <table class="verify-table">
+            <caption class="sr-only">Unverified information</caption>
+            <thead>
+              <tr><th scope="col">Item</th><th scope="col">Where it appears</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Specific Premium membership benefits</td><td>Scenario 1</td></tr>
+              <tr><td>Annual membership contents and billing treatment</td><td>Scenario 2</td></tr>
+              <tr><td>Account-access help steps and the official support channel</td><td>Scenario 3</td></tr>
+              <tr><td>Cancellation steps</td><td>Scenario 4</td></tr>
+              <tr><td>Escalation channel for harm and legal claims</td><td>Scenario 5</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. FUTURE AUTOMATION -->
+    <section id="future" aria-labelledby="future-title">
+      <div class="wrap">
+        <h2 id="future-title">Future automation: planned Week 6 workflow</h2>
+        <p class="prose">The next phase will connect the steps below into a demonstration workflow. It is planned, not yet built, and will continue to use synthetic inquiries only.</p>
+        <ol class="flow">
+          <li>
+            <strong>Synthetic inquiry</strong>
+            <p>A fictional customer message enters the workflow. No real customer data is used.</p>
+          </li>
+          <li>
+            <strong>AI classification and draft</strong>
+            <p>The assistant assigns an authority level and drafts a response using approved information only.</p>
+          </li>
+          <li>
+            <strong>Human review</strong>
+            <p>A person approves, edits, or rejects the draft and decides on any consequential action.</p>
+          </li>
+          <li>
+            <strong>Approved output or escalation</strong>
+            <p>The result is an approved demonstration response, or the case is escalated without action.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site">
+    <div class="wrap">
+      <p><strong>Life Skills HQ — Customer Support Assistant Prototype, Version 1.0</strong></p>
+      <p>Academic course project for BUS 583 Human + Machine. All customer scenarios are synthetic. This page is not affiliated with or deployed as an official Life Skills HQ support service, collects no information, and makes no commitments on behalf of Life Skills HQ.</p>
+    </div>
+  </footer>
+</body>
+</html>
